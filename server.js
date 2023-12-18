@@ -1,20 +1,18 @@
 const fs = require('fs');
 const path = require('path');
 const express = require('express');
+const PORT = process.env.PORT || 3000;
+const app = express();
+// Create a unique id for each note
 const {v4:uuidv4} = require('uuid');
 
-
-const PORT = process.env.PORT || 3000;
-
-const app = express();
-
 let notes = [];
-
-app.use(express.json());
+// Allows public folder to be used
 app.use(express.static('public'));
+app.use(express.json());
 
 // Path to db.json and data persistence
-const dbPath = path.join(__dirname, '/develop/db/db.json');
+const dbPath = path.join(__dirname, './db/db.json');
 
 // Read from db.json when server starts
 fs.readFile(dbPath, 'utf8', (err, data) => {
@@ -35,33 +33,8 @@ app.get('/api/notes', (req, res) => {
     });
 });
 
-// UPDATE POST route to write to db.json
-app.post('/api/notes', (req, res) => {
-    const newNote = {
-        id: uuidv4(),
-        title: req.body.title,
-        text: req.body.text
-    };
-    // Add new note to notes array
-    notes.push(newNote);
-    // Save notes array to db.json
-    fs.writeFile(dbPath, JSON.stringify(notes), (err) => {
-        if (err) {
-            console.error(err);
-            return res.status(500).json({
-                error: 'Internal Server Error'
-            });
-        }
-        // Respond to client with the new note
-        res.json(newNote);
-    });
-});
 
-// Route to get all notes
-app.get('/api/notes', (req, res) => {
-    res.json(notes);
-});
-// Save a new note
+// Save a new note / Post 
 app.post('/api/notes', (req, res) => {
     const newNote ={
         id:uuidv4(),  // Generates a unique id of the new note
@@ -69,22 +42,35 @@ app.post('/api/notes', (req, res) => {
         text: req.body.text    // Text of the new note
     };
     notes.push(newNote); // *!! newNote is place holder.  Need to push to db.json !!*
-
-    res.json(newNote); // Respond to client with the new note
+    fs.writeFile(dbPath, JSON.stringify(notes), (err) => {
+        if (err) {
+            console.error(err);
+            return res.status(500).json({
+                error: 'Internal Server Error'
+            });
+        }else{
+            res.json(newNote); // Respond to client with the new note
+        }
+    });
 });
 
 
+// Delete a note / Delete
 
-// HTML routes
+
+// -HTML routes-
+// Home route
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+// Notes route
 app.get('/notes', (req, res) => {
-    res.sendFile(path.join(__dirname, '/Develop/public/notes.html'));
+    res.sendFile(path.join(__dirname, 'public', 'notes.html'));
 });
-
 // Wildcard route
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '/Develop/public/index.html'));
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
-
 // Handle Errors for undefined routes
 app.use((req, res, next) => {
     if (!req.route) {
@@ -92,15 +78,12 @@ app.use((req, res, next) => {
     }
     next();
 });
-
 // Other Errors
 app.use((err, req, res, next) => {
     console.error(err.stack);
     res.status(500).send('500 Error: Internal Server Error');
 });
-
-
-// Listener code for server - this is for Heroku
+// Listener code for server 
 app.listen(PORT, () => {
     console.log(`Server listening on port ${PORT}`);
 });
