@@ -15,7 +15,7 @@ app.use(express.static("public"));
 app.use(express.json());
 
 // Path to db.json and data persistence
-const dbPath = path.join(__dirname, "./db/db.json");
+const dbPath = path.join(__dirname, "db/db.json");
 
 // Read from db.json when server starts
 fs.readFile(dbPath, "utf8", (err, data) => {
@@ -58,6 +58,39 @@ app.post("/api/notes", (req, res) => {
 
 // Delete a note / Delete
 
+
+// Delete a note
+app.delete('/api/notes/:id', (req, res) => {
+  const noteId = req.params.id;
+  
+  // Read the current notes from the file
+  fs.readFile(dbPath, (err, data) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal Server Error" });
+    }
+    
+    // Parse the existing notes
+    notes = JSON.parse(data);
+
+    // Filter out the note with the given ID
+    notes = notes.filter((note) => note.id !== noteId);
+
+    // Write the updated notes back to the file
+    fs.writeFile(dbPath, JSON.stringify(notes), (err) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: "Internal Server Error" });
+      } else {
+        res.json({ message: `Note with id ${noteId} deleted` });
+      }
+    });
+  });
+});
+
+
+
+
 // -HTML routes-
 // Home route
 app.get("/", (req, res) => {
@@ -78,6 +111,7 @@ app.use((req, res, next) => {
   }
   next();
 });
+
 // Other Errors
 app.use((err, req, res, next) => {
   console.error(err.stack);
